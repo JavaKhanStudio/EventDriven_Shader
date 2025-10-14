@@ -72,8 +72,10 @@ function onShaderReady() {
 ---
 
 ## Question 1 : Événements sur un élément spécifique
+<img src="screens/Libre.png" alt="drawing" width="200" height="200"/>
+<img src="screens/Click.png" alt="drawing" width="200" height="200"/>
+<img src="screens/Survol.png" alt="drawing" width="200" height="200"/>
 
-![alt text](screens/ReleaseButton.png)
 
 Ajoutez trois event listeners sur l'élément `theCube` :
 
