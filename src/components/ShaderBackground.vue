@@ -37,7 +37,7 @@ const props = defineProps({
   alpha: {type: Boolean, default: true},
   antialias: {type: Boolean, default: true},
   preserveDrawingBuffer: {type: Boolean, default: false},
-  zIndex: {type: [Number, String], default: -1},
+  zIndex: {type: [Number, String], default: 100},
 
   // NEW: placeholder & fade controls
   placeholderColor: {type: String, default: '#0b0f19'},
@@ -95,9 +95,19 @@ async function init() {
   const geo = new THREE.PlaneGeometry(2, 2)
   const uniforms = THREE.UniformsUtils.merge([
     {
-      u_time: {value: 0},
-      u_resolution: {value: new THREE.Vector2(el.clientWidth, el.clientHeight)},
-      u_mouse: {value: new THREE.Vector2(0, 0)},
+      uClick:       { value: 0.0 },
+      uDblClick:    { value: 0.0 },
+      uMouseDown:   { value: 0.0 },
+      uMouseUp:     { value: 0.0 },
+      uMousePos:    { value: new THREE.Vector2(0.0, 0.0) },
+      uMouseEnter:  { value: 0.0 },
+      uMouseLeave:  { value: 0.0 },
+      uKeyDown:     { value: 0.0 },
+      uKeyUp:       { value: 0.0 },
+      uScroll:      { value: 0.0 },
+      uTime:       { value: 0.0 },
+      uMouse:      { value: new THREE.Vector2(0.0, 0.0) },
+      uResolution: {value: new THREE.Vector2(el.clientWidth, el.clientHeight)}
     },
     props.uniforms,
   ])
@@ -123,7 +133,7 @@ async function init() {
   // render a first frame ASAP, then flip the ready flag to fade in
   start = performance.now()
   if (!stopped) {
-    material.uniforms.u_time.value = 0.0001
+    material.uniforms.uTime.value = 0.0001
     renderer.render(scene, camera)
     await nextTick()
     requestAnimationFrame(() => {
@@ -138,7 +148,7 @@ function animate() {
   if (stopped || disposed || !material) return
   rafId = requestAnimationFrame(animate)
   const t = (performance.now() - start) / 1000
-  material.uniforms.u_time.value = t
+  material.uniforms.uTime.value = t
   renderer.render(scene, camera)
 }
 
@@ -148,7 +158,7 @@ function onResize() {
   const h = root.value.clientHeight
   renderer.setPixelRatio(getDPR())
   renderer.setSize(w, h, false)
-  material?.uniforms?.u_resolution?.value.set(w, h)
+  material?.uniforms?.uResolution?.value.set(w, h)
 }
 
 function onVisibility() {
@@ -220,8 +230,6 @@ watch(
     () => props.uniforms,
     (newUniforms) => {
       if (!material || !material.uniforms) return
-
-      console.log('🎨 Updating shader uniforms:', newUniforms)
 
       for (const [key, val] of Object.entries(newUniforms)) {
         if (!material.uniforms[key]) continue

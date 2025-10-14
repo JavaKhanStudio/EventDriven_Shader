@@ -1,5 +1,3 @@
-// Fragment Shader
-// EVENT UNIFORMS - Set these from JavaScript (0.0 = off, 1.0 = on)
 uniform float uClick;        // Click event
 uniform float uDblClick;     // Double click event
 uniform float uMouseDown;    // Mouse button down
@@ -7,52 +5,80 @@ uniform float uMouseUp;      // Mouse button up
 uniform vec2 uMousePos;      // Mouse position (0.0 to 1.0 range)
 uniform float uMouseEnter;   // Mouse enters
 uniform float uMouseLeave;   // Mouse leaves
-uniform float uDragStart;    // Drag starts
-uniform float uDrag;         // Dragging
-uniform float uDragEnd;      // Drag ends
 uniform float uKeyDown;      // Key pressed
 uniform float uKeyUp;        // Key released
 uniform float uScroll;       // Scroll amount (0.0 to 1.0)
 
 uniform float uTime;
+uniform vec2 uMouse;
+uniform vec2 uResolution;
 varying vec2 vUv;
 
 void main() {
     vec3 color = vec3(0.1); // Base dark color
 
-    // CLICK - Red flash from center
+    // Compute aspect-corrected coordinates
+    vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
+
+    // Apply aspect correction before distance calculation
+    vec2 uv = (vUv - uMouse) * aspect;
+    float mouseDist = length(uv);
+
+    // Create smooth circular glow
+    float mouseGlow = smoothstep(0.06, 0.001, mouseDist);
+
+    color += vec3(0.6, 0.2, 0.8) * mouseGlow * 0.9;
+
+    // MOUSE CLICK - Red ring (border only)
     if (uClick > 0.0) {
-        float dist = distance(vUv, vec2(0.5));
-        float flash = smoothstep(0.6, 0.0, dist) * uClick;
-        color += vec3(1.0, 0.0, 0.0) * flash;
+        vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
+        vec2 uv = (vUv - uMouse) * aspect;
+
+        float mouseDist = length(uv);
+
+        // Define inner and outer radius for the ring
+        float outer = 0.15;
+        float inner = 0.13;
+
+        // Create a thin ring using difference of smoothsteps
+        float ring = smoothstep(outer, outer - 0.005, mouseDist)
+        - smoothstep(inner, inner - 0.005, mouseDist);
+
+        // Add red glow depending on click intensity
+        color += vec3(1.0, 0.0, 0.0) * ring * uClick;
     }
+
 
     // DOUBLE CLICK - Orange expanding ring
     if (uDblClick > 0.0) {
-        float dist = distance(vUv, vec2(0.5));
-        float ring = abs(sin((dist - uDblClick * 2.0) * 20.0)) * smoothstep(1.0, 0.0, dist);
+        float ring = abs(sin((mouseDist - uDblClick * 2.0) * 200.0)) * smoothstep(0.1, 0.0, mouseDist);
         color += vec3(1.0, 0.5, 0.0) * ring * uDblClick;
     }
 
     // MOUSE DOWN - Blue corners light up
     if (uMouseDown > 0.0) {
-        float corners = max(abs(vUv.x - 0.5), abs(vUv.y - 0.5));
-        float cornerGlow = smoothstep(0.5, 0.3, corners);
-        color += vec3(0.0, 0.5, 1.0) * cornerGlow * uMouseDown;
+        float cornerGlow = smoothstep(0.1, 0.0, mouseDist);
+        color += vec3(0.0, 0.1, 1.0) * cornerGlow * uMouseDown;
     }
 
-    // MOUSE UP - White center pulse
+    // MOUSE UP - Star-shaped white pulse
     if (uMouseUp > 0.0) {
-        float dist = distance(vUv, vec2(0.5));
-        float pulse = smoothstep(0.3, 0.0, dist) * uMouseUp;
-        color += vec3(1.0) * pulse;
-    }
+        vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
+        vec2 uv = (vUv - uMouse) * aspect;
 
-    // MOUSE POSITION - Yellow circle follows mouse
-    if (length(uMousePos) > 0.0) {
-        float mouseDist = distance(vUv, uMousePos);
-        float mouseCircle = smoothstep(0.1, 0.0, mouseDist);
-        color += vec3(1.0, 1.0, 0.0) * mouseCircle * 0.8;
+        // Polar coordinates
+        float r = length(uv);
+        float a = atan(uv.y, uv.x);
+
+        // Create star pattern using cosine modulation
+        // The 5.0 defines how many points your star has
+        float starShape = abs(cos(a * 5.0)) * 0.3 + 0.7;
+
+        // The inner part glows stronger, outer part fades
+        float starMask = smoothstep(starShape * 0.1, 0.0, r);
+
+        // Animate pulse if desired (e.g. based on uMouseUp)
+        color += vec3(1.0) * starMask * uMouseUp;
     }
 
     // MOUSE ENTER - Green fade from edges
@@ -69,42 +95,18 @@ void main() {
         color += vec3(1.0, 0.0, 0.0) * edgeGlow * uMouseLeave * 0.5;
     }
 
-    // DRAG START - Cyan spiral from center
-    if (uDragStart > 0.0) {
-        vec2 centered = vUv - 0.5;
-        float angle = atan(centered.y, centered.x);
-        float dist = length(centered);
-        float spiral = sin(angle * 3.0 + dist * 10.0) * 0.5 + 0.5;
-        color += vec3(0.0, 1.0, 1.0) * spiral * uDragStart * smoothstep(0.5, 0.0, dist);
-    }
-
-    // DRAGGING - Magenta trail effect
-    if (uDrag > 0.0) {
-        float lines = sin(vUv.x * 30.0 + uTime * 5.0) * 0.5 + 0.5;
-        color += vec3(1.0, 0.0, 1.0) * lines * uDrag * 0.6;
-    }
-
-    // DRAG END - Purple burst
-    if (uDragEnd > 0.0) {
-        vec2 centered = vUv - 0.5;
-        float angle = atan(centered.y, centered.x);
-        float dist = length(centered);
-        float burst = sin(angle * 8.0 - dist * 5.0 + uDragEnd * 3.0) * 0.5 + 0.5;
-        color += vec3(0.5, 0.0, 1.0) * burst * uDragEnd;
-    }
-
     // KEY DOWN - Vertical bars from top
     if (uKeyDown > 0.0) {
-        float bars = step(0.5, sin(vUv.x * 15.0));
+        float bars = step(0.5, sin(vUv.x * 10.0) + 20.);
         float topDown = smoothstep(1.0, 0.0, vUv.y);
         color += vec3(0.0, 1.0, 0.5) * bars * topDown * uKeyDown;
     }
 
     // KEY UP - Vertical bars from bottom
     if (uKeyUp > 0.0) {
-        float bars = step(0.5, sin(vUv.x * 15.0));
-        float bottomUp = smoothstep(0.0, 1.0, vUv.y) * smoothstep(1.0, 0.5, vUv.y);
-        color += vec3(0.5, 1.0, 0.0) * bars * bottomUp * uKeyUp;
+        float bars = step(0.2, sin(vUv.x * 100.0));
+        float bottomUp = smoothstep(0.0, 1.0, vUv.y) * smoothstep(0.3, 0.5, vUv.y);
+        color += vec3(1.5, 0.3, 0.3) * bars * bottomUp * uKeyUp;
     }
 
     // SCROLL - Horizontal wave
