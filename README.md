@@ -4,8 +4,8 @@
 
 1. **Cloner le projet**
    ```bash
-   git clone https://github.com/nom-du-repo.git
-   cd nom-du-repo
+   git clone https://github.com/JavaKhanStudio/EventDriven_Shader.git
+   cd EventDriven_Shader
    ```
 
 2. **Installer les dépendances**
