@@ -20,7 +20,7 @@
 
 4. **Ouvrir le projet dans le navigateur**
    ```
-   http://localhost:5173/
+   http://localhost:8080/
    ```
 
 ---
